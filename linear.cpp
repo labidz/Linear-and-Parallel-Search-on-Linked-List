@@ -1,27 +1,8 @@
 #include<iostream>
 #include <chrono>
 #include <iomanip>
+#include "common.h"
 
-struct Node{
-    long long data;
-    Node *next;
-};
-Node *head = NULL;
-
-void insertEnd(long long x){
-    Node *ptr = new Node();
-    ptr->data=x;
-    if(head==NULL)
-        head=ptr;
-    else{
-        Node *temp = head;
-        while(temp->next!=NULL){
-            temp=temp->next;
-        }
-        temp->next=ptr;
-        ptr->next=NULL;
-    }
-}
 int search(int key){
     auto start_time = std::chrono::high_resolution_clock::now();
     Node *temp = head;
