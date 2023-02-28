@@ -85,10 +85,12 @@ void parallelSearch(int key) {
 
 int main(int argc, char **argv) {
     std::cin >> n;
-    for (long long i = 0; i < n; i++) {
+    for (long long i = 0; i < n-1; i++) {
         //int a; std::cin>>a;
-        insertEnd(i);
+        int t = rand()%10;
+        insertEnd(t);
     }
+    insertEnd(10);
 
     while (true) {
         std::cout << "Enter Key: ";

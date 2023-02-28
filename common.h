@@ -8,12 +8,12 @@
 #include "chrono"
 
 struct Node {
-    long long data;
+    int data;
     Node *next;
 };
 Node *head = nullptr;
 
-void insertEnd(long long x) {
+void insertEnd(int x) {
     Node *ptr = new Node();
     ptr->data = x;
     if (head == nullptr)
@@ -39,5 +39,6 @@ void end_tick(std::chrono::time_point<std::chrono::system_clock> start_time) {
               << std::fixed << std::setprecision(3) << duration.count() / 1000 << "ms" << std::endl;
 
 }
+
 
 #endif //PARALLEL_SEARCH_COMMON_H

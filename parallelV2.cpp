@@ -1,81 +1,105 @@
 #include<iostream>
-#include <chrono>
 #include <iomanip>
 #include <thread>
 #include <vector>
+#include "common.h"
+#include "unordered_map"
+
 
 int ck = 0, n=0;
-struct Node{
-    long long data;
-    Node *next;
-};
-Node *head = NULL;
+bool stop_thread = false;
 
-void insertEnd(long long x){
-    Node *ptr = new Node();
-    ptr->data=x;
-    if(head==NULL)
-        head=ptr;
-    else{
-        Node *temp = head;
-        while(temp->next!=NULL){
-            temp=temp->next;
-        }
-        temp->next=ptr;
-        ptr->next=NULL;
-    }
-}
+void search(Node *start, Node *end, int key, Node &result) {
+    if (stop_thread) return;
 
-void search(Node* start, Node* end, int key, int& result) {
-    for (Node* current = start; current != end; current = current->next) {
+    for (Node *current = start; current != end; current = current->next) {
         if (current->data == key) {
-            result = current->data;
-            std::cout<<"Found"<<std::endl;
+            result = *current;
             ck = 1;
+            stop_thread = true;
             return;
         }
     }
 }
 
-void parallelSearch(int key, int num_threads) {
-    auto start_time = std::chrono::high_resolution_clock::now();
-    int chunk_size = (n + num_threads - 1) / num_threads;
+
+
+/*
+ * Cache
+ */
+
+std::unordered_map<int, std::vector<Node *>> chunk_cache;
+std::unordered_map<int, Node *> search_cache;
+
+
+void parallelSearch(int key, unsigned int num_threads) {
+    auto start_time = start_tick();
+    stop_thread = false;
+    ck = 0;
+    auto c_result = search_cache.find(key);
+    if (c_result != search_cache.end()) {
+        ck = 1;
+        std::cout << "Found a match in cache:: k: " << c_result->first <<std::endl;// " v: " << c_result->second->data << std::endl;
+        end_tick(start_time);
+        return;
+    }
+
+    auto chunk_size = (n + num_threads - 1) / num_threads;
+
     std::vector<std::thread> threads(num_threads);
-    int result = -1;
+    Node result;
 
     // Launch the threads to search for the key in each chunk
-    Node* start = head;
+    Node *start = head;
     for (int i = 0; i < num_threads; i++) {
-        Node* end = start;
-        for (int j = 0; j < chunk_size && end != nullptr; j++) {
-            end = end->next;
+        auto c_ptr = chunk_cache.find(i);
+        if (c_ptr != chunk_cache.end()) {
+            threads[i] = std::thread(search, c_ptr->second[0], c_ptr->second[1], key, std::ref(result));
+            threads[i].join();
+        } else {
+            Node *Nend = start;
+            for (int j = 0; j < chunk_size && Nend != nullptr; j++) {
+                Nend = Nend->next;
+            }
+            threads[i] = std::thread(search, start, Nend, key, std::ref(result));
+            //Cache chunk boundaries
+            std::vector<Node *> tmp;
+            tmp.push_back(start);
+            tmp.push_back(Nend);
+            chunk_cache.insert(std::make_pair(i, tmp));
+            start = Nend;
+            // join thread to main thread
+            threads[i].join();
         }
-        threads[i] = std::thread(search, start, end, key, std::ref(result));
-        start = end;
     }
-    auto end_time = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
-    std::cout << "Execution time: " << std::fixed << std::setprecision(2) << duration.count() << " ms\n";
-    // Wait for all threads to finish
-    for (int i = 0; i < num_threads; i++) {
-        threads[i].join();
+
+
+    if (ck == 0) {
+        std::cout << "Not Found" << std::endl;
+    } else {
+        search_cache.insert(std::make_pair(key, &result));
+        std::cout << "Found a match:: k: " << key << " v: " << result.data << std::endl;
+
     }
-    if(ck == 0) std::cout<<"Not Found"<<std::endl;
+
+    end_tick(start_time);
 }
+
 
 int main(int argc, char **argv) {
     int t;
     std::cin>>n;
-    for(long long i=0;i<n-1;i++){
+    for(int i=0;i<n-1;i++){
         //int a; std::cin>>a;
-        t = rand()%100000;
+        t = rand()%10;
         insertEnd(t);
     }
-    insertEnd(100001);
+    insertEnd(10);
 
-    int num_threads = std::thread::hardware_concurrency();
+    unsigned int num_threads = std::thread::hardware_concurrency();
 
-    parallelSearch(100001, num_threads);
+    parallelSearch(10, num_threads);
+    parallelSearch(10, num_threads);
 
     return 0;
 }
